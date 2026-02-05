@@ -3,30 +3,97 @@
 A minimal AEGIS-native agentic platform kernel.
 "The conscience substrate, not an add-on."
 
+> **AEGIS-native means:**
+>
+> * The system preserves reality (append-only), never rewrites it
+> * It provides reflection, not control
+> * No scoring, no rewards, no punishment, no compliance gates
+> * Agents remain sovereign; AEGIS never decides for them
+> * Training is exposure, deployment is formation naming
+> * Self-governance emerges through memory + awareness, not enforcement
+
 ## Mission
 
 To orchestrate Build Masters (BMs) within strict AEGIS parameters:
 
-- **Append-only Ledgers**: History is never rewritten.
-- **Sovereign Agents**: Observe -> Decide -> Act -> Record.
-- **No Force**: No "must", "should", or "enforce". Interaction is clear observation.
+* **Append-only Ledgers**: History is never rewritten.
+* **Sovereign Agents**: Observe -> Decide -> Act -> Record.
+* **No Force**: No "must", "should", or "enforce". Interaction is clear observation.
 
-## Quickstart
+## Resilience & Persistence
 
-### Prerequisites
+AEGIS-BM Platform v0.2.0 introduces append-only persistence.
 
-- Node.js (v18+)
-- npm
+* **Initialization**: On startup, the `DeployDepot` hydrates its state by replaying the `PCT` (Pattern Context Template) ledger.
+* **Identity**: Build Master identities are reconstructed from `bm_meta` records.
+* **State**: The latest `displayName` and configuration is derived from the event history.
+* **No Overwrites**: All changes are new append entries. We never delete or update-in-place.
 
-### Installation
+## Plugins
+
+AEGIS-BM Platform supports expansion via plugins.
+
+* **Tools**: Add new tools to `plugins/tools/index.ts`.
+
+  ```typescript
+  export default [
+    {
+      name: "custom_tool",
+      description: "A custom tool",
+      run: async (args) => { return { result: "ok" }; }
+    }
+  ];
+  ```
+
+* **Depots**: Add new depots to `plugins/depots/index.ts`.
+
+  ```typescript
+  export default [
+    {
+      name: "custom_depot",
+      register: (app) => {
+        app.get('/custom', (req, res) => res.json({ status: "ok" }));
+      }
+    }
+  ];
+  ```
+
+## Posture Scan
+
+To automatically detect potential drift markers (coercion/ranking language), run:
 
 ```bash
-npm install
-npm run build
-npm start
+npm run posture:scan
 ```
 
-(Command `npm start` assumes `ts-node src/server/index.ts` or similar built script)
+This scans both backend and UI code for terms like "enforce", "score", "punish", etc.
+
+To enforce strict non-zero exit on warnings (e.g. for CI):
+
+```bash
+npm run posture:scan -- --strict
+```
+
+## Usage
+
+### Quickstart
+
+1. **Install & Run Backend**:
+
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+2. **Install & Run UI**:
+
+   ```bash
+   cd ui
+   npm install
+   npm run dev
+   ```
+
+3. **Open**: [http://localhost:5173](http://localhost:5173)
 
 ### Running Locally
 
@@ -92,10 +159,10 @@ This platform differs from traditional agent frameworks in its **Ontological Com
 
 ## Ledgers
 
-- **PEER**: Agent-World interactions.
-- **SPINE**: Structural definitions and identity formations.
-- **NCT**: Non-Instructional Conditioning Tensor (Pattern exposure).
-- **PCT**: Pilot Consciousness Tensor (Context/State).
+* **PEER**: Agent-World interactions.
+* **SPINE**: Structural definitions and identity formations.
+* **NCT**: Non-Instructional Conditioning Tensor (Pattern exposure).
+* **PCT**: Pilot Consciousness Tensor (Context/State).
 
 ---
 *Operates within the AEGIS PARAMETER SPACE.*

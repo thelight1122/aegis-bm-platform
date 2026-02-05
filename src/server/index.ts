@@ -3,12 +3,22 @@ import { CORE_LEDGERS, readLedger } from '../core/modules.js';
 import { tools, listTools } from '../tools/registry.js';
 import { deployDepot } from '../depots/deploy.js';
 import { trainingDepot } from '../depots/training.js';
+import { listDepots, registerDepot } from '../depots/registry.js';
 import { BuildMaster } from '../runtime/agent.js';
+import { loadPlugins } from '../core/plugins.js';
 
 const app = express();
+
+// Basic CORS to allow local Vite client
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+});
+
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 // Middleware to log request (Observation)
 app.use((req, res, next) => {
@@ -36,16 +46,20 @@ app.get('/tools', (req, res) => {
 // Creates a new Build Master
 app.post('/bm/create', async (req, res) => {
     try {
-        const { name } = req.body;
-        if (!name) {
-            res.status(400).json({ error: "Name parameter required." });
+        const { displayName, name, bmId, dataquad } = req.body;
+        // Support both displayName and legacy name
+        const finalName = displayName || name;
+
+        if (!finalName) {
+            res.status(400).json({ error: "displayName parameter required." });
             return;
         }
 
-        const bm = await deployDepot.deployBM(name);
+        const bm = await deployDepot.deployBM(finalName, bmId, dataquad);
         res.json({
             message: "Build Master formation named.",
-            bm: { id: bm.id, name: bm.name }
+            bmId: bm.id,
+            displayName: bm.name
         });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
@@ -56,7 +70,7 @@ app.post('/bm/create', async (req, res) => {
 app.get('/bm/list', async (req, res) => {
     try {
         const bms = await deployDepot.listBMs();
-        res.json(bms);
+        res.json({ bms });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
@@ -132,6 +146,11 @@ app.post('/depot/deploy', async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
+// GET /depots
+app.get('/depots', (req, res) => {
+    const list = listDepots();
+    res.json(list.map(d => ({ name: d.name, description: d.description })));
+});
 
 // GET /aegis/readall
 // Returns contents of all ledgers
@@ -154,6 +173,11 @@ app.get('/aegis/readall', async (req, res) => {
 });
 
 // Start Server
+// 1. Load Plugins
+await loadPlugins(app);
+// 2. Hydrate Depots (Persistence)
+await deployDepot.hydrate();
+
 app.listen(PORT, () => {
     console.log(`AEGIS Orchestrator listening on port ${PORT}`);
     console.log(`Operating context: AEGIS-BOUND`);

@@ -1,12 +1,14 @@
 {
   "name": "aegis-bm-platform",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AEGIS Build Master Platform Kernel",
   "main": "dist/server/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/server/index.js",
+    "build": "tsc && npm run build:ui",
+    "build:ui": "cd ui && npm install && npm run build",
+    "start": "node dist/src/server/index.js",
     "dev": "ts-node src/server/index.ts",
+    "posture:scan": "node scripts/posture-scan.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
