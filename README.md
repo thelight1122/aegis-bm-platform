@@ -1,6 +1,6 @@
-# AEGIS Build Master Platform (v0.1.0)
+# AEGIS Build Master Platform (v0.4.0)
 
-A minimal AEGIS-native agentic platform kernel.
+A minimal AEGIS-native agentic platform kernel evolving into an IDE.
 "The conscience substrate, not an add-on."
 
 > **AEGIS-native means:**
@@ -12,67 +12,35 @@ A minimal AEGIS-native agentic platform kernel.
 > * Training is exposure, deployment is formation naming
 > * Self-governance emerges through memory + awareness, not enforcement
 
-## Mission
+## IDE Skeleton (v0.4.0 - Phase 2: Tool Integration)
 
-To orchestrate Build Masters (BMs) within strict AEGIS parameters:
+Version 0.4.0 introduces Phase 2: Tools + Agent Autonomy.
 
-* **Append-only Ledgers**: History is never rewritten.
-* **Sovereign Agents**: Observe -> Decide -> Act -> Record.
-* **No Force**: No "must", "should", or "enforce". Interaction is clear observation.
+* **Tool Contract v0.1**: Formalized plug-shape for tools with JSON Schema input/output definitions.
+* **Tool Depot**: A centralized registry for discovering and executing sovereign tools.
+* **Sovereign Agent Runner**: An autonomous loop that observes workspace state and chooses tool interactions from a bonded (selected) set.
+* **Append-only Tool Events**: All tool requests, starts, completions, and errors are recorded as immutable nodes in the run timeline.
 
-## Resilience & Persistence
+## Tool Contract v0.1
 
-AEGIS-BM Platform v0.2.0 introduces append-only persistence.
+Tools must implement the `ToolDefinition` interface:
 
-* **Initialization**: On startup, the `DeployDepot` hydrates its state by replaying the `PCT` (Pattern Context Template) ledger.
-* **Identity**: Build Master identities are reconstructed from `bm_meta` records.
-* **State**: The latest `displayName` and configuration is derived from the event history.
-* **No Overwrites**: All changes are new append entries. We never delete or update-in-place.
-
-## Plugins
-
-AEGIS-BM Platform supports expansion via plugins.
-
-* **Tools**: Add new tools to `plugins/tools/index.ts`.
-
-  ```typescript
-  export default [
-    {
-      name: "custom_tool",
-      description: "A custom tool",
-      run: async (args) => { return { result: "ok" }; }
-    }
-  ];
-  ```
-
-* **Depots**: Add new depots to `plugins/depots/index.ts`.
-
-  ```typescript
-  export default [
-    {
-      name: "custom_depot",
-      register: (app) => {
-        app.get('/custom', (req, res) => res.json({ status: "ok" }));
-      }
-    }
-  ];
-  ```
-
-## Posture Scan
-
-To automatically detect potential drift markers (coercion/ranking language), run:
-
-```bash
-npm run posture:scan
+```typescript
+export interface ToolDefinition {
+    id: string;
+    name: string;
+    description: string;
+    version: string;
+    inputSchema: any; // JSON Schema draft-07
+    handler: (input: any) => Promise<any>;
+}
 ```
 
-This scans both backend and UI code for terms like "enforce", "score", "punish", etc.
+### Adding a Tool
 
-To enforce strict non-zero exit on warnings (e.g. for CI):
-
-```bash
-npm run posture:scan -- --strict
-```
+1. Create or define your tool in `src/tools/registry.ts`.
+2. Register it using `registerTool({ ... })`.
+3. The tool becomes instantly discoverable via `GET /api/tools`.
 
 ## Usage
 
@@ -95,74 +63,37 @@ npm run posture:scan -- --strict
 
 3. **Open**: [http://localhost:5173](http://localhost:5173)
 
-### Running Locally
+### API Usage (Curl Examples)
 
-The server listens on port 3000 by default.
-
-## API Usage (Curl Examples)
-
-### 1. Check Health
+#### 1. List Available Tools
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:4000/api/tools
 ```
 
-### 2. Create a Build Master
+#### 2. Start a Run with Bonded Tools
 
 ```bash
-curl -X POST http://localhost:3000/bm/create \
+curl -X POST http://localhost:4000/api/runs \
   -H "Content-Type: application/json" \
-  -d '{"name": "BM-Alpha"}'
+  -d '{
+    "projectId": "proj_123", 
+    "teamId": "team_abc", 
+    "toolIds": ["hello.tool", "time"]
+  }'
 ```
 
-### 3. List Build Masters
+#### 3. Manual Tool Call within a Run
 
 ```bash
-curl http://localhost:3000/bm/list
-```
-
-### 4. Run a Build Master (Echo Tool)
-
-Replace `BM_ID` with the ID returned from creation.
-
-```bash
-curl -X POST http://localhost:3000/bm/run \
+curl -X POST http://localhost:4000/api/runs/run_123/toolcalls \
   -H "Content-Type: application/json" \
-  -d '{"bmId": "BM_ID", "input": {"toolName": "echo", "args": "Hello AEGIS"}}'
+  -d '{
+    "toolId": "hello.tool", 
+    "input": {"name": "Sovereign Observer"},
+    "requestedBy": "user"
+  }'
 ```
-
-### 5. Training Exposure (NCT)
-
-```bash
-curl -X POST http://localhost:3000/depot/training \
-  -H "Content-Type: application/json" \
-  -d '{"pattern": "observed_logic_drift"}'
-```
-
-### 6. Read All Ledgers
-
-```bash
-curl http://localhost:3000/aegis/readall
-```
-
-## What makes this AEGIS-native?
-
-This platform differs from traditional agent frameworks in its **Ontological Commitments**:
-
-1. **Append-Only Reality**: All state determines from `PEER`, `SPINE`, `NCT`, and `PCT` ledgers which are strictly append-only. There is no `UPDATE` or `DELETE` operation anywhere in the kernel.
-
-2. **No Scoring or Optimization**: Agents are not rewarded for "success" or punished for "failure". They simply record observations and outcomes. "Drift is information, not violation."
-
-3. **Observation over Enforcement**: The runtime loop is `Observe -> Decide -> Act -> Record`. There is no "Safety Layer" that intercepts thoughts. Stability emerges from the `SPINE` (formation integrity), not from runtime policing.
-
-4. **Language of Formation**: We use terms like "Formation Naming" instead of "Deployment", and "Exposure" instead of "Training", to reflect the non-force nature of the system.
-
-## Ledgers
-
-* **PEER**: Agent-World interactions.
-* **SPINE**: Structural definitions and identity formations.
-* **NCT**: Non-Instructional Conditioning Tensor (Pattern exposure).
-* **PCT**: Pilot Consciousness Tensor (Context/State).
 
 ---
-*Operates within the AEGIS PARAMETER SPACE.*
+*Operates within the AEGIS PARAMETER SPACE (Append-Only / Choice-Preserving).*

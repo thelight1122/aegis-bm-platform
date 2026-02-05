@@ -1,184 +1,319 @@
 import express from 'express';
 import { CORE_LEDGERS, readLedger } from '../core/modules.js';
-import { tools, listTools } from '../tools/registry.js';
+import { listTools, getTool } from '../tools/registry.js';
+import { toolRunner } from '../tools/runner.js';
+import { agentRunner } from '../agent/agentRunner.js';
 import { deployDepot } from '../depots/deploy.js';
 import { trainingDepot } from '../depots/training.js';
-import { listDepots, registerDepot } from '../depots/registry.js';
+import { projectsDepot, teamsDepot, tasksDepot, runsDepot, ensureSeedData } from '../depots/ide.js';
+import { listDepots } from '../depots/registry.js';
 import { BuildMaster } from '../runtime/agent.js';
 import { loadPlugins } from '../core/plugins.js';
+import * as crypto from 'crypto';
 
 const app = express();
-
-// Basic CORS to allow local Vite client
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    next();
-});
-
 app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
 
-// Middleware to log request (Observation)
+// Basic CORS to allow local Vite client
 app.use((req, res, next) => {
-    // We could log every HTTP request to PEER as a raw observation?
-    // For now, keeping it clean to not flood logs, but AEGIS observes everything.
-    // Let's rely on specific endpoints logging to ledgers.
-    next();
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+    } else {
+        next();
+    }
 });
 
-// GET /health
+// --- CORE SYSTEM ROUTES ---
+
 app.get('/health', (req, res) => {
-    res.json({
-        status: 'nominal',
-        message: 'AEGIS Orchestrator operating within parameters.'
-    });
+    res.json({ ok: true, name: 'AEGIS Orchestrator', version: '0.4.0' });
 });
 
-// GET /tools
 app.get('/tools', (req, res) => {
-    const registry = listTools().map(t => ({ name: t.name, description: t.description }));
-    res.json(registry);
+    res.json({ tools: listTools().map(t => ({ name: t.name, description: t.description })) });
 });
 
-// POST /bm/create
-// Creates a new Build Master
-app.post('/bm/create', async (req, res) => {
+app.get('/api/tools', (req, res) => {
     try {
-        const { displayName, name, bmId, dataquad } = req.body;
-        // Support both displayName and legacy name
-        const finalName = displayName || name;
-
-        if (!finalName) {
-            res.status(400).json({ error: "displayName parameter required." });
-            return;
-        }
-
-        const bm = await deployDepot.deployBM(finalName, bmId, dataquad);
-        res.json({
-            message: "Build Master formation named.",
-            bmId: bm.id,
-            displayName: bm.name
-        });
+        res.json({ tools: listTools() });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// GET /bm/list
+// --- BUILD MASTER (BM) OPS ---
+
+app.post('/bm/create', async (req, res) => {
+    try {
+        const bm = await BuildMaster.create(req.body);
+        res.json(bm);
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/bm/list', async (req, res) => {
     try {
-        const bms = await deployDepot.listBMs();
+        const entries = await CORE_LEDGERS.PCT.readAll();
+        const bms = entries.map(e => e.data);
         res.json({ bms });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// POST /bm/run
-// Runs a cycle for a specific BM
 app.post('/bm/run', async (req, res) => {
     try {
-        const { bmId, input } = req.body;
-        if (!bmId) {
-            res.status(400).json({ error: "bmId required." });
-            return;
-        }
+        const { bmId, text, meta } = req.body;
+        const bm = await BuildMaster.load(bmId);
+        if (!bm) return res.status(404).json({ error: "Build Master not found" });
 
-        // Verify BM existence (Grounding)
-        const allBms = await deployDepot.listBMs();
-        const bmData = allBms.find(b => b.id === bmId);
+        const result = await bm.run(text, meta);
+        res.json({ output: result });
+    } catch (e: any) {
+        console.error("API Error (/bm/run):", e);
+        res.status(500).json({ error: e.message });
+    }
+});
 
-        if (!bmData) {
-            res.status(404).json({ error: `Build Master ${bmId} not found in SPINE.` });
-            return;
-        }
+// --- IDE SKELETON API (/api/ prefixed) ---
 
-        const agent = new BuildMaster(bmData.id, bmData.name);
-        const result = await agent.run(input || {});
-
-        res.json(result);
-
+app.get('/api/projects', async (req, res) => {
+    try {
+        const projects = await projectsDepot.listProjects();
+        res.json({ projects });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// POST /depot/training
-// Writes to NCT (Training = Exposure)
+app.get('/api/teams', async (req, res) => {
+    try {
+        const teams = await teamsDepot.listTeams();
+        res.json({ teams });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/teams/create', async (req, res) => {
+    // Legacy GET for testing, should be POST
+    res.status(405).json({ error: "Use POST /teams/create" });
+});
+
+app.post('/teams/create', async (req, res) => {
+    try {
+        const { name, members } = req.body;
+        const team = await teamsDepot.createTeam(name, members || []);
+        res.json(team);
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/projects/create', async (req, res) => {
+    try {
+        const p = await projectsDepot.createProject(req.body);
+        res.json(p);
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/tasks/list', async (req, res) => {
+    try {
+        const tasks = await tasksDepot.listTasks();
+        res.json({ tasks });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/tasks/create', async (req, res) => {
+    try {
+        const { title, intent, constraints, deliverables } = req.body;
+        const t = await tasksDepot.createTask(title, intent, constraints, deliverables);
+        res.json(t);
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/runs', async (req, res) => {
+    try {
+        const runs = await runsDepot.listRuns();
+        res.json({ runs });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/runs', async (req, res) => {
+    try {
+        const { projectId, teamId, taskId, toolIds } = req.body || {};
+        if (!projectId || !teamId) {
+            return res.status(400).json({ error: "projectId and teamId required" });
+        }
+        const run = await runsDepot.createRun(projectId, teamId, taskId, toolIds);
+        res.json({
+            runId: run.runId,
+            status: run.status,
+            runUrl: `/runs/${run.runId}`
+        });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/runs/:runId', async (req, res) => {
+    try {
+        const r = await runsDepot.getRun(req.params.runId);
+        if (!r) return res.status(404).json({ error: "Run not found" });
+        res.json(r);
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/runs/:runId/events', async (req, res) => {
+    try {
+        const afterSeq = req.query.afterSeq ? parseInt(req.query.afterSeq as string) : undefined;
+        const events = await runsDepot.getRunEvents(req.params.runId, afterSeq);
+        res.json({ events });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/runs/:runId/tools', async (req, res) => {
+    try {
+        const r = await runsDepot.getRun(req.params.runId);
+        if (!r) return res.status(404).json({ error: "Run not found" });
+        res.json({ toolIds: r.toolIds || [] });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/runs/:runId/tools', async (req, res) => {
+    try {
+        const { toolIds } = req.body;
+        const r = await runsDepot.setRunTools(req.params.runId, toolIds);
+        if (!r) return res.status(404).json({ error: "Run not found" });
+        res.json({ toolIds: r.toolIds });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/runs/:runId/toolcalls', async (req, res) => {
+    try {
+        const { toolId, input, requestedBy } = req.body;
+        const correlationId = `corr_${crypto.randomUUID().slice(0, 8)}`;
+
+        // Non-blocking trigger of the runner
+        toolRunner.execute(req.params.runId, {
+            toolId,
+            input,
+            requestedBy: requestedBy || 'user',
+            correlationId
+        }).catch(console.error);
+
+        res.json({ correlationId });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/runs/:runId/agent/start', async (req, res) => {
+    try {
+        const { mode, requestedBy } = req.body || {};
+        const agentSessionId = await agentRunner.startSession(req.params.runId, mode, requestedBy);
+        res.json({ ok: true, agentSessionId, runId: req.params.runId });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/runs/:runId/agent/pause', async (req, res) => {
+    try {
+        const { agentSessionId, requestedBy } = req.body;
+        await runsDepot.appendEvent(req.params.runId, 'agent.pause_requested', `Pause requested for session: ${agentSessionId}`, { agentSessionId, requestedBy: requestedBy || 'user' });
+        res.json({ ok: true });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/runs/:runId/agent/resume', async (req, res) => {
+    try {
+        const { agentSessionId, requestedBy } = req.body;
+        await runsDepot.appendEvent(req.params.runId, 'agent.resume_requested', `Resume requested for session: ${agentSessionId}`, { agentSessionId, requestedBy: requestedBy || 'user' });
+        res.json({ ok: true });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/runs/:runId/agent/stop', async (req, res) => {
+    try {
+        const { agentSessionId, requestedBy } = req.body;
+        await runsDepot.appendEvent(req.params.runId, 'agent.stop_requested', `Stop requested for session: ${agentSessionId}`, { agentSessionId, requestedBy: requestedBy || 'user' });
+        res.json({ ok: true });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/runs/halt', async (req, res) => {
+    try {
+        const r = await runsDepot.haltRun(req.body?.runId);
+        res.json(r);
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- DEPOT OPS ---
+
 app.post('/depot/training', async (req, res) => {
     try {
-        const { pattern } = req.body;
-        if (!pattern) {
-            res.status(400).json({ error: "Pattern data required." });
-            return;
-        }
-
-        const result = await trainingDepot.expose(pattern);
-        res.json({
-            message: "Pattern exposed to NCT.",
-            entry: result
-        });
+        const result = await trainingDepot.expose(req.body?.pattern || req.body);
+        res.json({ message: "Pattern exposed to NCT.", record: result });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// POST /depot/deploy
-// Writes to SPINE (Deployment = Formation Naming)
-// Generic endpoint for deploying non-BM formations or just alias
 app.post('/depot/deploy', async (req, res) => {
     try {
-        const { type, data } = req.body;
-        if (!type || !data) {
-            res.status(400).json({ error: "Type and data required." });
-            return;
-        }
-
-        // We use the same ledger.
-        const entry = await CORE_LEDGERS.SPINE.append(type, data);
-        res.json({
-            message: "Formation named in SPINE.",
-            entry
-        });
+        const entry = await CORE_LEDGERS.SPINE.append(req.body?.type || 'FORMATION', req.body?.data || req.body);
+        res.json({ message: "Formation named in SPINE.", record: entry });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
 });
-// GET /depots
+
 app.get('/depots', (req, res) => {
-    const list = listDepots();
-    res.json(list.map(d => ({ name: d.name, description: d.description })));
+    res.json(listDepots().map(d => ({ name: d.name, description: d.description })));
 });
 
-// GET /aegis/readall
-// Returns contents of all ledgers
-app.get('/aegis/readall', async (req, res) => {
-    try {
-        const peer = await readLedger('PEER');
-        const pct = await readLedger('PCT');
-        const nct = await readLedger('NCT');
-        const spine = await readLedger('SPINE');
-
-        res.json({
-            PEER: peer,
-            PCT: pct,
-            NCT: nct,
-            SPINE: spine
-        });
-    } catch (e: any) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// Start Server
-// 1. Load Plugins
+// START SERVER
 await loadPlugins(app);
-// 2. Hydrate Depots (Persistence)
-await deployDepot.hydrate();
+await Promise.all([
+    deployDepot.hydrate(), projectsDepot.hydrate(), teamsDepot.hydrate(), tasksDepot.hydrate(), runsDepot.hydrate()
+]);
+await ensureSeedData();
 
-app.listen(PORT, () => {
-    console.log(`AEGIS Orchestrator listening on port ${PORT}`);
-    console.log(`Operating context: AEGIS-BOUND`);
+// Start Sovereign Agent Runner Loop
+agentRunner.startGlobalLoop();
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`AEGIS Orchestrator v0.4.0 listening on port ${PORT}`);
+    console.log(`Operating context: AEGIS-BOUND (Append-Only)`);
 });

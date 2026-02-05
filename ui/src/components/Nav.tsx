@@ -10,16 +10,40 @@ export default function Nav() {
                 Build Masters
             </NavLink>
             <NavLink
+                to="/projects"
+                className={({ isActive }) => "tab" + (isActive ? " active" : "")}
+            >
+                Projects
+            </NavLink>
+            <NavLink
+                to="/teams"
+                className={({ isActive }) => "tab" + (isActive ? " active" : "")}
+            >
+                Teams
+            </NavLink>
+            <NavLink
+                to="/tasks"
+                className={({ isActive }) => "tab" + (isActive ? " active" : "")}
+            >
+                Tasks
+            </NavLink>
+            <NavLink
+                to="/runs"
+                className={({ isActive }) => "tab" + (isActive ? " active" : "")}
+            >
+                Runs
+            </NavLink>
+            <NavLink
                 to="/training"
                 className={({ isActive }) => "tab" + (isActive ? " active" : "")}
             >
-                Training Depot
+                Training
             </NavLink>
             <NavLink
                 to="/deploy"
                 className={({ isActive }) => "tab" + (isActive ? " active" : "")}
             >
-                Deploy Depot
+                Deploy
             </NavLink>
             <NavLink
                 to="/mirror"

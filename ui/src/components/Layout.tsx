@@ -27,7 +27,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <div className="row row-between">
                 <div>
                     <div className="h1">AEGIS Build Master Platform</div>
-                    <div className="badge">UI v0.1.0 • {status}</div>
+                    <div className="badge">UI v0.3.0 • {status}</div>
                     <div className="p max-820">
                         This interface is a mirror and depot console. It records, reflects, and surfaces—without scoring,
                         enforcement, or override. Self-governance remains sovereign.

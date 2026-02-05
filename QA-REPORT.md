@@ -1,101 +1,64 @@
-# QA Report: AEGIS-BM Platform v0.2.0
+# QA REPORT - Cycle v0.4.0 (Phase 2 Tool Integration + Agent Autonomy)
 
-**Date**: 2026-02-05  
-**Scope**: Persistence + Plugins + UI Scan Verification
+## Environment & Commands
 
----
+- **Environment**: Windows 11 / Node.js v24.13.0
+- **Orchestrator**: AEGIS Orchestrator v0.4.0 (Append-Only)
+- **QA Script**: `tsx qa_v0.4_tools.js` (using native fetch for peer-to-peer verification)
+- **Target URL**: `http://127.0.0.1:4000`
 
-## Test Results Summary
+## Test Results
 
-### ✅ PASS: Backend Build & Run
+### 1. Tool Catalog
 
-- **Build**: `npm run build` completed successfully
-- **TypeScript Compilation**: No errors
-- **UI Build**: Vite build completed (46 modules, 181KB bundle)
-- **Server Start**: `npm start` runs on port 4000
-- **Fix Applied**: Updated `package.json` start script path from `dist/server/index.js` to `dist/src/server/index.js` (due to tsconfig rootDir change)
+- **GET /api/tools**: Returns 5 tools including `hello.tool`, `context-exposure.tool`, `time`, `echo`, and plugin `reverse`.
+- **RESULT**: **PASS**
 
-### ✅ PASS: BM Persistence
+### 2. Tool Selection Persistence
 
-- **Test**: Created BM with ID `bm-persistent-01` and displayName `TestBM`
-- **Verification**: Server restarted, BM persisted and retrieved via `/bm/list`
-- **Ledger**: PCT.jsonl created in `data/` directory with `bm_meta` records
-- **Hydration**: `DeployDepot.hydrate()` successfully reconstructs BMs from PCT ledger on startup
+- **Action**: Created run `run_14668bf4` with bonded tools `['hello.tool', 'time']`.
+- **Evidence**: `Bonded Tools in Run: [ 'hello.tool', 'time' ]`
+- **RESULT**: **PASS**
 
-### ✅ PASS: Plugin Loader
+### 3. Manual Tool Call Recording
 
-- **Plugin Added**: `reverse` tool added to `plugins/tools/index.ts`
-- **Registration**: Plugin appears in `/tools` endpoint response
-- **Tools Available**: `echo`, `time`, `reverse`
-- **Loader**: `loadPlugins()` executes before server listen, registering both built-in and plugin tools
+- **Action**: Manual call to `hello.tool` (Correlation: `corr_89983126`).
+- **Evidence**:
+  - `[15:40:03.962Z] TOOL_CALL: Tool execution started: hello.tool (tool.started)`
+  - `[15:40:03.975Z] TOOL_RESULT: Tool execution completed: hello.tool (tool.completed)`
+- **RESULT**: **PASS**
 
-### ✅ PASS: Posture Scan Coverage
+### 4. Tool Error Path (Non-Force)
 
-- **Command**: `npm run posture:scan` executed successfully
-- **Coverage**: Scans both backend (`src/`) and UI (`ui/src/`) due to recursive walk from project root
-- **Strict Mode**: `--strict` flag support added for CI/CD (exits with code 1 on warnings)
-- **Output**: Reports drift markers with file path, line number, and matched term
+- **Action**: Called non-existent tool `non-existent-tool`.
+- **Evidence**:
+  - `[15:40:03.975Z] ERROR: Marker Error: Tool non-existent-tool not found in registry. (tool.errored)`
+- **PostCheck**: No "block/deny" posture observed; the event was recorded and the system continued.
+- **RESULT**: **PASS**
 
----
+### 5. Agent Runner v0.1
 
-## Files Modified
+- **Action**: Observed active run `run_14668bf4` with bonded toolset.
+- **Evidence**:
+  - `[15:40:04.163Z] SYSTEM: Agent choosing action: time`
+  - `Agent Tool Calls Detected: 2`
+- **Constraint Check**: Agent correctly selected from bonded tools only.
+- **RESULT**: **PASS**
 
-### Core Implementation
+### 6. UI Flow Verification
 
-1. **`src/depots/deploy.ts`**: Added `hydrate()`, updated `deployBM()` and `listBMs()` for persistence
-2. **`src/depots/registry.ts`**: NEW - Depot registry system
-3. **`src/core/plugins.ts`**: Rewritten for index-based plugin loading
-4. **`src/server/index.ts`**: Added hydration call, depot registry imports, `/depots` endpoint
-5. **`tsconfig.json`**: Changed `rootDir` to `.`, added `plugins/**/*` to includes
+- **Observation**:
+  - Catalog loads on Deploy Panel.
+  - Checkboxes allow bonding tools to workspace.
+  - Timeline renders tool lifecycle badges (`tool.started`, `tool.completed`, etc.).
+- **RESULT**: **PASS**
 
-### Plugin System
+## Issue Log
 
-6. **`plugins/tools/index.ts`**: Added `reverse` tool example
-2. **`plugins/depots/index.ts`**: Empty array (ready for depot plugins)
-
-### Configuration & Scripts
-
-8. **`package.json`**: Fixed start script path, version 0.2.0
-2. **`scripts/posture-scan.mjs`**: Added `--strict` mode support
-
-### Documentation
-
-10. **`README.md`**: Added "Resilience & Persistence", "Plugins", and "Posture Scan" sections
+- **Boundary Conflict**: None.
+- **Drift Marker**: None.
+- **Coherence Risk**: None.
 
 ---
-
-## Known Issues & Notes
-
-### Minor Issues
-
-- **UI Lint Warnings**: 99+ CSS inline style warnings in UI components (not blocking, cosmetic)
-- **Dev Mode**: `npm run dev` (ts-node) has module resolution issues; use `npm start` instead
-
-### Observations
-
-- **Ledger Files**: PCT.jsonl now stores BM metadata; SPINE.jsonl contains legacy formations
-- **Plugin Execution**: Tools are registered but no generic `/tools/execute` endpoint exists (would need to be added for runtime execution via HTTP)
-- **UI Build**: Separate from backend, builds to `ui/dist/`
-
----
-
-## Recommendations
-
-1. **Add Tool Execution Endpoint**: Consider adding `POST /tools/:name/execute` for testing plugin tools via HTTP
-2. **UI Lint Cleanup**: Move inline styles to external CSS files (low priority)
-3. **CI Integration**: Use `npm run posture:scan -- --strict` in CI pipeline
-4. **Documentation**: Add example depot plugin to README
-
----
-
-## Conclusion
-
-**All QA objectives PASSED**:
-
-- ✅ Backend builds and runs
-- ✅ UI builds and runs  
-- ✅ BM persistence survives restart
-- ✅ Plugin loader works (reverse tool registered)
-- ✅ Posture scan covers UI
-
-The platform is ready for v0.2.0 release with full persistence, plugin extensibility, and posture compliance scanning.
+**STATUS: ALL TESTS PASS**
+*Post-Run Realignment: Workspace coherence maintained. Phase 2 integration verified.*

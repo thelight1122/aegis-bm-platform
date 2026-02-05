@@ -19,8 +19,9 @@ export default function DeployDepotPage() {
         (async () => {
             try {
                 const res = await listBms();
-                setBms(res.bms);
-                if (res.bms.length) setBmId(res.bms[0].bmId);
+                const list = res?.bms || [];
+                setBms(list);
+                if (list.length) setBmId(list[0].bmId);
             } catch (e: any) {
                 setErr(e?.message || "Failed to load Build Masters.");
             }

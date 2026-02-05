@@ -1,37 +1,88 @@
-export interface Tool {
-    name: string;
-    description: string;
-    execute: (args: any) => Promise<any>;
+import { ToolDefinition } from './types.js';
+
+export const registry = new Map<string, ToolDefinition>();
+
+export function registerTool(tool: ToolDefinition) {
+    registry.set(tool.id, tool);
 }
 
-export const tools = new Map<string, Tool>();
-
-export function registerTool(tool: Tool) {
-    tools.set(tool.name, tool);
-}
-
-// Echo tool
+// 1. Hello Tool
 registerTool({
-    name: 'echo',
-    description: 'Reflects the input back to the observer.',
-    execute: async (args: any) => {
-        return args;
+    id: 'hello.tool',
+    name: 'Hello Tool',
+    description: 'Returns a greeting and current timestamp.',
+    version: '0.1.0',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            name: { type: 'string', description: 'Name to greet' }
+        }
+    },
+    handler: async (input: any) => {
+        return {
+            message: `Hello, ${input.name || 'Sovereign Peer'}. AEGIS welcomes your observation.`,
+            timestamp: new Date().toISOString()
+        };
     }
 });
 
-// Time tool
+// 2. Context Exposure Tool (Neutral)
 registerTool({
-    name: 'time',
-    description: 'Returns the current temporal marker.',
-    execute: async () => {
-        return new Date().toISOString();
+    id: 'context-exposure.tool',
+    name: 'Context Exposure',
+    description: 'Hydrates high-fidelity context from a text blob without scoring.',
+    version: '0.1.0',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            text: { type: 'string', description: 'The raw observation to parse' }
+        },
+        required: ['text']
+    },
+    handler: async (input: any) => {
+        // Pure observation: Extract patterns without judgment
+        const text = input.text || "";
+        const fragments = text.split(/\s+/).filter((s: string) => s.length > 5);
+        return {
+            exposureId: `exp_${Math.random().toString(36).slice(2, 9)}`,
+            patterns: fragments.slice(0, 3), // Just a sample extraction
+            observedTs: new Date().toISOString(),
+            posture: "Neutral/Observational"
+        };
     }
 });
 
-export function getTool(name: string): Tool | undefined {
-    return tools.get(name);
+// 3. Time Tool
+registerTool({
+    id: 'time',
+    name: 'Time Marker',
+    description: 'Returns the current temporal record.',
+    version: '0.1.0',
+    inputSchema: { type: 'object', properties: {} },
+    handler: async () => {
+        return { iso: new Date().toISOString() };
+    }
+});
+
+// 4. Echo Tool
+registerTool({
+    id: 'echo',
+    name: 'Mirror',
+    description: 'Reflects input exactly as received.',
+    version: '0.1.0',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            message: { type: 'string' }
+        }
+    },
+    handler: async (input: any) => input
+});
+
+export function getTool(id: string): ToolDefinition | undefined {
+    return registry.get(id);
 }
 
-export function listTools(): Tool[] {
-    return Array.from(tools.values());
+export function listTools(): ToolDefinition[] {
+    return Array.from(registry.values());
 }

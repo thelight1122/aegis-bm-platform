@@ -15,10 +15,11 @@ export class Ledger {
 
     constructor(name: string) {
         const dataDir = path.join(process.cwd(), 'data');
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir, { recursive: true });
-        }
         this.filePath = path.join(dataDir, `${name}.jsonl`);
+        const parentDir = path.dirname(this.filePath);
+        if (!fs.existsSync(parentDir)) {
+            fs.mkdirSync(parentDir, { recursive: true });
+        }
     }
 
     public async append(type: string, data: any): Promise<LedgerEntry> {

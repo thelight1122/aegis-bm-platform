@@ -10,7 +10,12 @@ export default function BuildMastersPage() {
     const [selected, setSelected] = useState<string>("");
     const [displayName, setDisplayName] = useState<string>("BM-One");
     const [bmId, setBmId] = useState<string>("");
-    const [dq, setDq] = useState<DataQuad>({ cognitive: {}, affective: {}, operational: {}, relational: {} });
+    const [dq, setDq] = useState<DataQuad>({
+        cognitive: { focus: "Structural Integrity", logic: "Axiomatic" },
+        affective: { posture: "Neutral", wattage: 0.8 },
+        operational: { mode: "Synthesis", throughput: "Normal" },
+        relational: { peerage: "Sovereign" }
+    });
 
     const [inputText, setInputText] = useState<string>("hello");
     const [output, setOutput] = useState<string>("");
@@ -25,9 +30,10 @@ export default function BuildMastersPage() {
         setErr("");
         try {
             const [bmRes, toolRes] = await Promise.all([listBms(), listTools()]);
-            setBms(bmRes.bms);
-            setTools(toolRes.tools);
-            setSelected((prev) => prev || (bmRes.bms[0]?.bmId ?? ""));
+            setBms(bmRes?.bms || []);
+            setTools(toolRes?.tools || []);
+            const firstId = bmRes?.bms?.[0]?.bmId || "";
+            setSelected((prev) => prev || firstId);
         } catch (e: any) {
             setErr(e?.message || "Failed to load backend data.");
         }

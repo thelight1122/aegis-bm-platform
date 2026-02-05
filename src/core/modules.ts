@@ -4,7 +4,11 @@ export const CORE_LEDGERS = {
     PEER: new Ledger('PEER'),
     PCT: new Ledger('PCT'),
     NCT: new Ledger('NCT'),
-    SPINE: new Ledger('SPINE')
+    SPINE: new Ledger('SPINE'),
+    PROJECTS: new Ledger('projects'),
+    TEAMS: new Ledger('teams'),
+    TASKS: new Ledger('tasks'),
+    RUNS: new Ledger('runs')
 };
 
 // Utilities for "observe, preserve, reflect"
