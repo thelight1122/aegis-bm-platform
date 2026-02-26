@@ -3,23 +3,37 @@ import { CORE_LEDGERS } from '../core/modules.js';
 import { getTool } from '../tools/registry.js';
 
 export class BuildMaster {
-    public id: string;
-    public name: string;
+    public bmId: string;
+    public displayName: string;
 
-    constructor(id: string, name: string) {
-        this.id = id;
-        this.name = name;
+    constructor(bmId: string, displayName: string) {
+        this.bmId = bmId;
+        this.displayName = displayName;
+    }
+
+    static async create(data: { displayName: string }): Promise<BuildMaster> {
+        const bmId = `bm_${crypto.randomUUID().slice(0, 8)}`;
+        const displayName = data.displayName || 'Anonymous Master';
+        const bm = new BuildMaster(bmId, displayName);
+        await CORE_LEDGERS.PCT.append('bm_meta', { bmId, displayName });
+        return bm;
+    }
+
+    static async load(bmId: string): Promise<BuildMaster | null> {
+        const entries = await CORE_LEDGERS.PCT.readAll();
+        const entry = entries.find(e => e.data?.bmId === bmId);
+        if (!entry) return null;
+        return new BuildMaster(entry.data.bmId, entry.data.displayName);
     }
 
     /**
      * The Core Agentic Loop: Observe -> Decide -> Act -> Record
      */
-    async run(input: any): Promise<any> {
+    async run(input: any, meta: any = {}): Promise<any> {
         // 1. OBSERVE
-        // The agent absorbs the input without judgment.
-        // In a full system, this would also read from PCT/NCT for context.
         const observation = {
             rawInput: input,
+            meta,
             timestamp: new Date().toISOString()
         };
 
@@ -41,7 +55,7 @@ export class BuildMaster {
         const tool = getTool(toolName);
         if (tool) {
             try {
-                actionResult = await tool.execute(toolArgs);
+                actionResult = await tool.handler(toolArgs);
             } catch (error: any) {
                 actionResult = { error: error.message };
             }
@@ -55,8 +69,8 @@ export class BuildMaster {
         // 4. RECORD
         // The cycle is preserved in the ledger.
         const record = {
-            bm_id: this.id,
-            bm_name: this.name,
+            bm_id: this.bmId,
+            bm_name: this.displayName,
             observation,
             decision,
             actionResult

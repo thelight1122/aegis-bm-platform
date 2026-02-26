@@ -26,11 +26,17 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="container">
             <div className="row row-between">
                 <div>
-                    <div className="h1">AEGIS Build Master Platform</div>
-                    <div className="badge">UI v0.3.0 • {status}</div>
+                    <div className="h1">Build Master Platform</div>
+                    <div className="badge mb-8">
+                        <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse mr-2 d-inline-block"></span>
+                        Workspace UI v0.3.0 • {status}
+                    </div>
                     <div className="p max-820">
-                        This interface is a mirror and depot console. It records, reflects, and surfaces—without scoring,
-                        enforcement, or override. Self-governance remains sovereign.
+                        Welcome to the local AEGIS Agent Sandbox. This environment lets you configure, test, and observe
+                        autonomous agents (Build Masters) securely.
+                        <br /><br />
+                        <strong>New to this?</strong> Start by creating a Build Master on the first tab, then give it tasks
+                        or run individual commands. Everything is safely recorded in an append-only log, so you can't break anything!
                     </div>
                 </div>
             </div>

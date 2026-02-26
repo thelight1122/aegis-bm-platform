@@ -1,0 +1,11 @@
+src/core/plugins.ts(35,17): error TS2353: Object literal may only specify known properties, and 'execute' does not exist in type 'ToolDefinition'.
+src/runtime/agent.ts(44,43): error TS2339: Property 'execute' does not exist on type 'ToolDefinition'.
+src/server/index.ts(53,38): error TS2339: Property 'create' does not exist on type 'typeof BuildMaster'.
+src/server/index.ts(73,38): error TS2339: Property 'load' does not exist on type 'typeof BuildMaster'.
+src/server/index.ts(316,12): error TS2769: No overload matches this call.
+  Overload 1 of 6, '(port: number, hostname: string, backlog: number, callback?: ((error?: Error | undefined) => void) | undefined): Server<typeof IncomingMessage, typeof ServerResponse>', gave the following error.
+    Argument of type 'string | 4000' is not assignable to parameter of type 'number'.
+      Type 'string' is not assignable to type 'number'.
+  Overload 2 of 6, '(port: number, hostname: string, callback?: ((error?: Error | undefined) => void) | undefined): Server<typeof IncomingMessage, typeof ServerResponse>', gave the following error.
+    Argument of type 'string | 4000' is not assignable to parameter of type 'number'.
+      Type 'string' is not assignable to type 'number'.

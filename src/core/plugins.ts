@@ -30,9 +30,12 @@ export async function loadPlugins(app: Express) {
         try {
             console.log(`Registering tool plugin: ${p.name}`);
             registerTool({
+                id: p.name.toLowerCase().replace(/\s+/g, '.'),
                 name: p.name,
                 description: p.description,
-                execute: p.run // Adapter: run -> execute
+                version: '0.1.0-plugin',
+                inputSchema: { type: 'object' },
+                handler: p.run // Adapter: run -> handler
             });
         } catch (e: any) {
             console.error(`Failed to register tool ${p.name}:`, e.message);

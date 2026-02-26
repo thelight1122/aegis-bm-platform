@@ -1,0 +1,35 @@
+1. Fetching Meta...
+Using Project: proj_c4bebbd3, Team: team_89ce9016
+Available Tools: hello.tool, context-exposure.tool, time, echo, reverse
+
+2. Creating Run with bonded tools: hello.tool, time...
+Run Created: run_fe19a183
+
+3. Verifying Persistence (Manual Selection check)...
+Bonded Tools in Run: [ 'hello.tool', 'time' ]
+PASS: Selection persisted.
+
+4. Manual Tool Call (hello.tool)...
+Call Emitted. Correlation: corr_374d2b8b
+
+5. Tool Error Path (Invalid Tool)...
+Error Call Emitted. Correlation: corr_eb915335
+
+6. Waiting for events and Agent loop (12s)...
+
+7. Final Event Timeline Check...
+Event Kinds Observed: [ 'system', 'tool_call', 'tool_result', 'error', 'log' ]
+Agent Tool Calls Detected: 0
+Tool Results Recorded: 1
+Errors Recorded: 1
+
+--- Timeline Extract ---
+[2026-02-05T23:19:43.371Z] TOOL_CALL: Tool execution started: hello.tool (hello.tool) - tool.started
+[2026-02-05T23:19:43.373Z] TOOL_CALL: Tool execution started: non-existent-tool (non-existent-tool) - tool.started
+[2026-02-05T23:19:43.379Z] TOOL_RESULT: Tool execution completed: hello.tool (hello.tool) - tool.completed
+[2026-02-05T23:19:43.382Z] ERROR: Marker Error: Tool non-existent-tool not found in registry. (non-existent-tool) - tool.errored
+
+8. Verification Summary:
+Agent Autonomy: FAIL
+Manual Interaction: PASS
+Error Handling: PASS

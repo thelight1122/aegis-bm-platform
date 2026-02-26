@@ -1,0 +1,2 @@
+src/depots/deploy.ts(96,22): error TS2339: Property 'id' does not exist on type 'BuildMaster'.
+src/depots/deploy.ts(97,29): error TS2339: Property 'name' does not exist on type 'BuildMaster'.

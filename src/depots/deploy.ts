@@ -93,8 +93,8 @@ export class DeployDepot {
     async listBMs(): Promise<any[]> {
         // Return from memory, ensuring O(1) read
         return Array.from(this.bmStore.values()).map(bm => ({
-            bmId: bm.id,
-            displayName: bm.name
+            bmId: bm.bmId,
+            displayName: bm.displayName
         }));
     }
 }

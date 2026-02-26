@@ -78,19 +78,19 @@ export default function BuildMastersPage() {
         <div className="row">
             <div className="col">
                 <Section
-                    title="Build Masters"
-                    subtitle="Create, list, and select a Build Master. Identity is stored append-only (DataQuad → PCT)."
+                    title="1) Select an Active Agent"
+                    subtitle="Pick a Build Master you've created earlier to give it tasks or review its logs."
                 >
-                    {err ? <div className="small text-warn">{err}</div> : null}
+                    {err ? <div className="small text-warn mb-12 bg-tool-err p-8 br-4">{err}</div> : null}
 
-                    <label className="label" htmlFor={existingSelectId}>Existing Build Masters</label>
+                    <label className="label" htmlFor={existingSelectId}>Available Build Masters</label>
                     <select
                         id={existingSelectId}
                         className="select"
                         value={selected}
                         onChange={(e) => setSelected(e.target.value)}
                     >
-                        <option value="" disabled>— select —</option>
+                        <option value="" disabled>— Select an Agent —</option>
                         {bms.map((b) => (
                             <option key={b.bmId} value={b.bmId}>
                                 {b.displayName} ({b.bmId})
@@ -101,36 +101,38 @@ export default function BuildMastersPage() {
                     <div className="spacer-12" />
 
                     <div className="badge">
-                        Selected: <span className="mono">{selectedBm ? `${selectedBm.displayName} (${selectedBm.bmId})` : "none"}</span>
+                        Currently Selected: <span className="mono bg-panel p-4 br-4 ml-4">{selectedBm ? `${selectedBm.displayName} (${selectedBm.bmId})` : "None"}</span>
                     </div>
 
-                    <div className="spacer-12" />
+                    <div className="spacer-18" />
 
-                    <button className="btn" onClick={refresh} disabled={busy}>Refresh</button>
+                    <button className="btn" onClick={refresh} disabled={busy}>Refresh List</button>
                 </Section>
             </div>
 
             <div className="col">
                 <Section
-                    title="Create a Build Master"
-                    subtitle="Creation does not score or rank identity. It appends an initial DataQuad record."
+                    title="Or Create a New Agent"
+                    subtitle="Spin up a fresh Build Master. Agent personalities are shaped by their DataQuad parameters."
                 >
-                    <label className="label" htmlFor={displayNameId}>Display Name</label>
+                    <label className="label" htmlFor={displayNameId}>Agent Display Name</label>
                     <input
                         id={displayNameId}
-                        className="input"
+                        className="input mb-4"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                     />
+                    <div className="small mb-12">A friendly name so you can recognize it later.</div>
 
-                    <label className="label" htmlFor={bmIdInputId}>Optional BM ID (leave blank for auto)</label>
+                    <label className="label" htmlFor={bmIdInputId}>Custom ID (Optional)</label>
                     <input
                         id={bmIdInputId}
-                        className="input"
+                        className="input mb-4"
                         value={bmId}
                         onChange={(e) => setBmId(e.target.value)}
-                        placeholder="bm_custom_id"
+                        placeholder="e.g. CodeBot_Alpha"
                     />
+                    <div className="small mb-12">Leave this blank to have an ID automatically generated.</div>
 
                     <div className="spacer-12" />
 
@@ -138,49 +140,55 @@ export default function BuildMastersPage() {
 
                     <div className="spacer-12" />
 
-                    <button className="btn primary" onClick={handleCreate} disabled={busy}>
-                        {busy ? "Working…" : "Create BM"}
+                    <button className="btn primary w-full" onClick={handleCreate} disabled={busy}>
+                        {busy ? "Working…" : "Create New Build Master"}
                     </button>
+                    <div className="small text-center mt-8">
+                        Creation simply records the agent's existence in an append-only ledger.
+                    </div>
                 </Section>
             </div>
 
             <div className="col col-full">
                 <Section
-                    title="Run a Single Cycle"
-                    subtitle="Runs observe → decide → act → record. Use /tool to call tools (agent-side), recorded by AEGIS."
+                    title="2) Give it a Task (Run a Cycle)"
+                    subtitle="Ask questions, run tools, or give simple commands. The agent processes and responds."
                 >
                     <div className="row">
                         <div className="col">
-                            <label className="label" htmlFor={runInputId}>Input</label>
+                            <label className="label" htmlFor={runInputId}>Task Input</label>
                             <input
                                 id={runInputId}
                                 className="input"
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
+                                placeholder="e.g., Use /tool time"
                             />
                             <div className="small mt-10">
-                                Tool syntax: <span className="mono">/tool time {"{}"}</span> or <span className="mono">/tool echo {"{\"x\":1}"}</span>
+                                <strong>Tip:</strong> If you want the agent to use a tool, format it like this: <span className="mono bg-panel p-4 br-4">/tool time {"{}"}</span>
                             </div>
 
                             <div className="spacer-12" />
-                            <button className="btn primary" onClick={handleRun} disabled={!selected || busy}>
-                                {busy ? "Running…" : "Run BM once"}
+                            <button className="btn primary w-full" onClick={handleRun} disabled={!selected || busy}>
+                                {busy ? "Agent is working…" : "Send Task"}
                             </button>
                         </div>
 
                         <div className="col">
-                            <label className="label">Output</label>
-                            <div className="card card-pad-12">
-                                <div className="mono pre-wrap">{output || "—"}</div>
+                            <label className="label">Agent Output</label>
+                            <div className="card card-pad-12" style={{ minHeight: '120px' }}>
+                                <div className="mono pre-wrap text-muted">{output || "Waiting for task..."}</div>
                             </div>
 
                             <div className="spacer-12" />
 
-                            <div className="h2">Available Tools</div>
+                            <div className="h2 mt-12">Tools Available for Agents</div>
+                            <div className="small mb-12">These are capabilities you can ask the agent to use securely:</div>
                             <div className="small">
                                 {tools.length ? tools.map((t) => (
-                                    <div key={t.name} className="tool-item">
-                                        <span className="mono">{t.name}</span> — {t.description}
+                                    <div key={t.name} className="tool-item bg-surface p-8 br-4 mb-4 border-line">
+                                        <strong className="text-ok">{t.name}</strong> <br />
+                                        <span className="text-muted">{t.description}</span>
                                     </div>
                                 )) : "No tools loaded."}
                             </div>

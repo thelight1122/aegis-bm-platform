@@ -14,7 +14,7 @@ import * as crypto from 'crypto';
 const app = express();
 app.use(express.json());
 
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT) || 4000;
 
 // Basic CORS to allow local Vite client
 app.use((req, res, next) => {
@@ -41,6 +41,24 @@ app.get('/tools', (req, res) => {
 app.get('/api/tools', (req, res) => {
     try {
         res.json({ tools: listTools() });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/aegis/readall', async (req, res) => {
+    try {
+        const [peer, pct, nct, spine, projects, teams, tasks, runs] = await Promise.all([
+            CORE_LEDGERS.PEER.readAll(),
+            CORE_LEDGERS.PCT.readAll(),
+            CORE_LEDGERS.NCT.readAll(),
+            CORE_LEDGERS.SPINE.readAll(),
+            projectsDepot.listProjects(),
+            teamsDepot.listTeams(),
+            tasksDepot.listTasks(),
+            runsDepot.listRuns()
+        ]);
+        res.json({ peer, pct, nct, spine, projects, teams, tasks, runs });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
@@ -233,7 +251,13 @@ app.post('/api/runs/:runId/toolcalls', async (req, res) => {
 app.post('/api/runs/:runId/agent/start', async (req, res) => {
     try {
         const { mode, requestedBy } = req.body || {};
-        const agentSessionId = await agentRunner.startSession(req.params.runId, mode, requestedBy);
+        const agentSessionId = `asess_${crypto.randomUUID().slice(0, 8)}`;
+
+        // Start non-blocking
+        agentRunner.startSession(req.params.runId, mode, requestedBy, agentSessionId).catch(err => {
+            console.error(`[Agent Error] Run ${req.params.runId} Session ${agentSessionId}:`, err);
+        });
+
         res.json({ ok: true, agentSessionId, runId: req.params.runId });
     } catch (e: any) {
         res.status(500).json({ error: e.message });

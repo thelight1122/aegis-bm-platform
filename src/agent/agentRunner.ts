@@ -3,8 +3,8 @@ import { runsDepot } from '../depots/ide.js';
 import { toolRunner } from '../tools/runner.js';
 
 export class AgentRunner {
-    async startSession(runId: string, mode: "once" | "untilComplete" = "once", requestedBy: "user" | "system" = "user") {
-        const agentSessionId = `asess_${crypto.randomUUID().slice(0, 8)}`;
+    async startSession(runId: string, mode: "once" | "untilComplete" = "once", requestedBy: "user" | "system" = "user", providedSessionId?: string) {
+        const agentSessionId = providedSessionId || `asess_${crypto.randomUUID().slice(0, 8)}`;
 
         await runsDepot.appendEvent(runId, 'agent.requested', `Agent session requested: ${agentSessionId}`, {
             agentSessionId,
@@ -143,7 +143,21 @@ export class AgentRunner {
     }
 
     async startGlobalLoop() {
-        // Observational logic
+        console.log("Starting Sovereign Agent Global Loop (Pulse)...");
+        while (true) {
+            try {
+                const runs = await runsDepot.listRuns();
+                const activeRuns = runs.filter(r => r.status === 'running');
+
+                for (const run of activeRuns) {
+                    // Autonomous pulse (no session context)
+                    await this.runStep(run.runId);
+                }
+            } catch (e: any) {
+                console.error("Agent Global Loop Error:", e.message);
+            }
+            await new Promise(r => setTimeout(r, 5000));
+        }
     }
 }
 

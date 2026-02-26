@@ -5,9 +5,11 @@
   "main": "dist/server/index.js",
   "scripts": {
     "build": "tsc && npm run build:ui",
-    "build:ui": "cd ui && npm install && npm run build",
+    "build:ui": "npm install --prefix ui && npm run build --prefix ui",
     "start": "node dist/src/server/index.js",
-    "dev": "tsx --watch src/server/index.ts",
+    "dev:server": "tsx --watch src/server/index.ts",
+    "dev:ui": "npm run dev --prefix ui",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:ui\"",
     "posture:scan": "node scripts/posture-scan.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -25,6 +27,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.2.0",
     "@types/uuid": "^10.0.0",
+    "concurrently": "^9.2.1",
     "tsx": "^4.21.0"
   }
 }
