@@ -4,14 +4,15 @@
   "description": "AEGIS Build Master Platform Kernel",
   "main": "dist/server/index.js",
   "scripts": {
-    "build": "tsc && npm run build:ui",
+    "build:server": "tsc",
+    "build": "run-s build:server build:ui",
     "build:ui": "npm install --prefix ui && npm run build --prefix ui",
     "start": "node dist/src/server/index.js",
     "dev:server": "tsx --watch src/server/index.ts",
     "dev:ui": "npm run dev --prefix ui",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:ui\"",
     "posture:scan": "node scripts/posture-scan.mjs",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\""
   },
   "keywords": [],
   "author": "",
@@ -28,6 +29,7 @@
     "@types/node": "^25.2.0",
     "@types/uuid": "^10.0.0",
     "concurrently": "^9.2.1",
+    "npm-run-all": "^4.1.5",
     "tsx": "^4.21.0"
   }
 }

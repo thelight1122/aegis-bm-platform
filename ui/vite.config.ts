@@ -7,7 +7,8 @@ export default defineConfig({
         port: 5174,
         strictPort: true,
         headers: {
-            "Content-Security-Policy": "frame-ancestors 'self' http://localhost:5173 http://127.0.0.1:5173;"
+            "Content-Security-Policy": "frame-ancestors *;",
+            "Access-Control-Allow-Origin": "*"
         }
     }
 });
