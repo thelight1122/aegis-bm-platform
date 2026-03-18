@@ -1,6 +1,7 @@
 import express from 'express';
 import { CORE_LEDGERS, readLedger } from '../core/modules.js';
 import { listTools, getTool } from '../tools/registry.js';
+import { listSkills, getCatalog, installSkill, addCatalogSkill, editCatalogSkill, archiveCatalogSkill } from '../skills/manager.js';
 import { toolRunner } from '../tools/runner.js';
 import { agentRunner } from '../agent/agentRunner.js';
 import { deployDepot } from '../depots/deploy.js';
@@ -41,6 +42,72 @@ app.get('/tools', (req, res) => {
 app.get('/api/tools', (req, res) => {
     try {
         res.json({ tools: listTools() });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/skills', (req, res) => {
+    try {
+        res.json({ skills: listSkills() });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/skills/catalog', (req, res) => {
+    try {
+        res.json({ catalog: getCatalog() });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/skills/install', (req, res) => {
+    try {
+        const { skillId } = req.body;
+        if (!skillId) {
+            return res.status(400).json({ error: "skillId is required" });
+        }
+        const success = installSkill(skillId);
+        if (success) {
+            res.json({ ok: true, message: `Skill ${skillId} installed successfully` });
+        } else {
+            res.status(404).json({ error: `Skill ${skillId} not found in catalog` });
+        }
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/skills/catalog', (req, res) => {
+    try {
+        const { skill } = req.body;
+        if (!skill || !skill.id) return res.status(400).json({ error: "Skill data and ID required" });
+        addCatalogSkill(skill);
+        res.json({ ok: true, message: `Skill ${skill.id} added to catalog` });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/skills/catalog/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { data } = req.body;
+        if (!data) return res.status(400).json({ error: "Data is required" });
+        editCatalogSkill(id, data);
+        res.json({ ok: true, message: `Skill ${id} updated in catalog` });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/skills/catalog/:id/archive', (req, res) => {
+    try {
+        const { id } = req.params;
+        archiveCatalogSkill(id);
+        res.json({ ok: true, message: `Skill ${id} archived in catalog` });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }

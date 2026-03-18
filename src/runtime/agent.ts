@@ -1,21 +1,28 @@
 import * as crypto from 'crypto';
 import { CORE_LEDGERS } from '../core/modules.js';
 import { getTool } from '../tools/registry.js';
+import { listSkills } from '../skills/manager.js';
 
 export class BuildMaster {
     public bmId: string;
     public displayName: string;
+    public dataquad?: any;
 
-    constructor(bmId: string, displayName: string) {
+    constructor(bmId: string, displayName: string, dataquad?: any) {
         this.bmId = bmId;
         this.displayName = displayName;
+        this.dataquad = dataquad;
     }
 
-    static async create(data: { displayName: string }): Promise<BuildMaster> {
+    static async create(data: any): Promise<BuildMaster> {
         const bmId = `bm_${crypto.randomUUID().slice(0, 8)}`;
         const displayName = data.displayName || 'Anonymous Master';
         const bm = new BuildMaster(bmId, displayName);
-        await CORE_LEDGERS.PCT.append('bm_meta', { bmId, displayName });
+        await CORE_LEDGERS.PCT.append('bm_meta', { 
+            bmId, 
+            displayName, 
+            dataquad: data.dataquad 
+        });
         return bm;
     }
 
@@ -23,7 +30,7 @@ export class BuildMaster {
         const entries = await CORE_LEDGERS.PCT.readAll();
         const entry = entries.find(e => e.data?.bmId === bmId);
         if (!entry) return null;
-        return new BuildMaster(entry.data.bmId, entry.data.displayName);
+        return new BuildMaster(entry.data.bmId, entry.data.displayName, entry.data.dataquad);
     }
 
     /**
@@ -31,10 +38,16 @@ export class BuildMaster {
      */
     async run(input: any, meta: any = {}): Promise<any> {
         // 1. OBSERVE
+        const selectedSkills = this.dataquad?.operational?.skills || [];
+        const allSkills = listSkills();
+        const activeSkills = allSkills.filter(s => selectedSkills.includes(s.id));
+        const combinedInstructions = activeSkills.map(s => `## Skill: ${s.name}\n${s.content}`).join('\n\n');
+
         const observation = {
             rawInput: input,
             meta,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            systemPrompt: combinedInstructions // Prompt Injection Injection Context
         };
 
         // 2. DECIDE
